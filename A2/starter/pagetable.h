@@ -47,6 +47,7 @@ typedef unsigned long addr_t;
 
 // Page directory entry (top-level)
 typedef struct { 
+	// a pointer to a second-level page table
 	uintptr_t pde; 
 } pgdir_entry_t;
 

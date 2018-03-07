@@ -35,12 +35,34 @@ int allocate_frame(pgtbl_entry_t *p) {
 	if(frame == -1) { // Didn't find a free page.
 		// Call replacement algorithm's evict function to select victim
 		frame = evict_fcn();
-
+        
 		// All frames were in use, so victim frame must hold some page
 		// Write victim page to swap, if needed, and update pagetable
 		// IMPLEMENTATION NEEDED
+        pgtbl_entry_t *victim = coremap[frame].pte;
+        
+        // Write victim page to swap
+        int swapfile_offset = swap_pageout(frame, victim->swap_off);
 
-
+        //  check if the data was written on success
+        if(swapfile_offset == INVALID_SWAP) {
+        	perror("INVALID_SWAP");
+        } else {
+        	// save the offset 
+            victim->swap_off = swapfile_offset;
+            // Set flag to 'page has been evicted to swap file'
+            victim->frame = victim->frame | PG_ONSWAP;
+        }
+        
+        // Check if Dirty and increase counter.
+        // Bitwise and will only be true if the PG_DIRTY bit is true
+        // This also relies on the fact that if(anyvalue != 0) is true
+        if(victim->frame & PG_DIRTY) {
+            evict_dirty_count ++;
+        } else { 
+        	// if it is not dirty then its clean
+            evict_clean_count ++;
+        }
 	}
 
 	// Record information for virtual page that will now be stored in frame
@@ -141,10 +163,23 @@ char *find_physpage(addr_t vaddr, char type) {
 
 	// Use vaddr to get index into 2nd-level page table and initialize 'p'
 
+	// Get pointer to the correct page table
+	uintptr_t *pgtbl_p =  (pgdir[idx]).pde;
 
+	unsigned itx = PGTBL_INDEX(vaddr); // get index into page table
 
+	// Get correct entry from the page table
+	p = pgtbl_p[itx];
 	// Check if p is valid or not, on swap or not, and handle appropriately
 
+	// if p is valid 
+	if (p->frame & PG_VALID){
+		hit_count = hit_count + 1;
+	}
+	// if p is not in physical memory 
+	else{
+		miss_count = miss_count + 1;
+	}
 
 
 	// Make sure that p is marked valid and referenced. Also mark it
