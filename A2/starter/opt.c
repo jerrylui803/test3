@@ -15,6 +15,8 @@ extern char *tracefile;
 
 static int time;
 
+addr_t *phys_frame;
+
 #define MAXLINE 256
 
 
@@ -23,40 +25,33 @@ static int time;
 
 struct node{
 	struct node* next;
-	struct node* curr; // used only during initialization
+	addr_t vaddr;
 	int call_time;
 };
 
-
-struct node *frame_list = NULL;
+// linked list, ordered by call time
+// and vaddr is also stored in the node
+struct node *root = NULL;
+// Note that curr is only needed during init
+// so that there is no need to traversing the whole list again
+struct node *curr = NULL; 
 
 
 void next_vaddr_ref(addr_t vaddr){
 	// create a new node
 	struct node *new_node = malloc(sizeof(struct node));
-	new_node -> call_time = time;
-	new_node -> next = NULL;
+	new_node->vaddr = vaddr;
+	new_node->next = NULL;
 
-	time = time + 1;
-	if (vaddr > memsize){
-		printf("FAIL");
+	time = time + 1; // fix this
 
+	if (!root){
+		root = new_node;
+		curr = new_node;
 	}
-	else{
-		printf("Success");
-	}
-	fflush(stdout);
-	// if this is the first time this address is referenced
-	if(frame_list[vaddr].curr == NULL){
-		return;
-		frame_list[vaddr].curr = new_node;
-
-	} 
-	// else this is not the first time
 	else {
-		return;
-		(frame_list[vaddr].curr)->next = new_node;
-		(frame_list[vaddr].curr) = (frame_list[vaddr].curr)->next;
+		curr->next = new_node;
+		curr = new_node;
 	}
 
 }
@@ -74,19 +69,60 @@ void next_vaddr_ref(addr_t vaddr){
  * for the page that is to be evicted.
  */
 int opt_evict() {
-	int idx = (int)(random() % memsize);
-	
-	return idx;
-	
-	return 0;
+
+	int i;
+	int curr_time = 0;
+	int max_time = 0;
+	int max_time_frame_index = 0;
+	int inf_time;
+	// for each frame in the physical memory
+	for (i = 0; i < memsize; i++){
+		addr_t curr_vaddr = phys_frame[i];
+		curr_time = 0;
+		struct node *curr = root;
+		inf_time = 1;
+
+		// check if the virtual address in the i-th frame will ever be accessed again,
+		// if yes, check when was it accessed, since we want to find the frame
+		// that will be accessed the latest
+		while (curr != NULL){
+
+			if (curr->vaddr == curr_vaddr && curr_time > max_time){
+				max_time = curr_time;
+				max_time_frame_index = i;
+				// this address stored in this frame will be accessed later
+				inf_time = 0;
+			}
+			curr_time = curr_time + 1;
+			curr = curr->next;
+		}
+		// if this virtual address in this frameis never accessed again, 
+		// then this is the right choice, remove this frame
+		if (inf_time){
+			return i;
+		}
+	}
+	return max_time_frame_index;
 }
+
+
+
+
+
+
 
 /* This function is called on each access to a page to update any information
  * needed by the opt algorithm.
  * Input: The page table entry for the page that is being accessed.
  */
 void opt_ref(pgtbl_entry_t *p) {
-
+	// update whats in the physical memory
+	phys_frame[PGTBL_INDEX(p->frame)];
+	// the update the linked list, so that it still
+	// contains only the future memory access (sorted by early to late access time)
+	struct node *to_free = root;
+	root = root->next;
+	free(to_free);
 	return;
 }
 
@@ -97,20 +133,18 @@ void opt_init() {
 	
 
 	time = 0;
-	// each element is a struct, the index is the vaddr
-	// each element is a node, the node contains the next
-	// time that this vaddr is used
-	frame_list = malloc(memsize * sizeof(struct node));
-	int i = 0;
+	// Keep a copy of the status of the physical frame
+	// index is the frame number
+	// each entry keep track of which vaddr is using it
+	phys_frame = malloc(memsize * sizeof(addr_t));
+	int i;
 	for(i = 0; i < memsize; i++){
-		frame_list[i].curr = NULL;
+		phys_frame[i]= NULL;
 	}
 
 
-
-
 	// read the entire swap file first to set up the OPT algorithm
-	// below is basically copied from sim.c
+	// below is copied directly from sim.c, comments are in sim.c
 	FILE *tfp = stdin;
 	if(tracefile != NULL) {
 		if((tfp = fopen(tracefile, "r")) == NULL) {
