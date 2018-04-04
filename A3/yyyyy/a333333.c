@@ -56,22 +56,19 @@ int main(int argc, char *argv[]) {
 		printf("%s \n", dirArray[j]);
 	}
 
+	// get root inode
 
-	//Compare inodes with each fileArray?
-	// root inode
-	int inodeNum = EXT2_ROOT_INO;
-	// run length(dirArray) times to get the coorspoin 
 	struct ext2_super_block *sb = (struct ext2_super_block *) (disk + 1024);
 	struct ext2_group_desc *gd = (struct ext2_group_desc *) (disk + 2048);
 
 	// get the root inode
 	// root inode number 2 (at index 1)
-	struct ext2_inode *ino = (struct ext2_dir_entry_2 *) (disk + 1024 * gd->bg_inode_table + 128 * 1);
+	struct ext2_inode *rootIno = (struct ext2_dir_entry_2 *) (disk + 1024 * gd->bg_inode_table + 128 * 1);
 
 	printf("root Inode information: \n");
-	printf("%d\n", ino->i_mode);
-	printf("%d\n", ino->i_blocks);
-	
+	printf("%d\n", rootIno->i_mode);
+	printf("%d\n", rootIno->i_blocks);
+
 
 	printf("---------Below is informaton--------\n");
 	// TUT
