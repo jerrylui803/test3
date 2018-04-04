@@ -5,6 +5,9 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 
+int check_dir(int inodeNum, char path){
+
+}
 int main(int argc, char *argv[]) {
 	char *path;
 	// name of disk. (Option flag -a). path. 
@@ -40,29 +43,37 @@ int main(int argc, char *argv[]) {
 	char *p = strtok(path, "/");
 	// hard code.
 	char *dirArray[10];
-	int i = 0;
+	int i = 1;
 	dirArray[0] = p;
 	while (p != NULL){
-		dirArray[i++] = p;
 		p = strtok (NULL, "/");
+		dirArray[i] = p;
+		i++;
+
 
 	}
-
-	for (int j=0; j < sizeof(dirArray); j++){
+	int numFiles = sizeof(dirArray)/sizeof(char *);
+	for (int j=0; j < numFiles; j++){
 		printf("%s \n", dirArray[j]);
 	}
 
+
 	//Compare inodes with each tokenarray name?
-	
+	// root inode
+	int inodeNum = EXT2_ROOT_INO;
+	// run length(dirArray) times to get the coorspoin 
+	struct ext2_super_block *sb = (struct ext2_super_block *) (disk + 1024);
+	struct ext2_group_desc *gd = (struct ext2_group_desc *) (disk + 2048);
 
-
+	//get the inode table
+	struct ext2_dir_entry_2 *inotable = (struct ext2_dir_entry_2 *) (disk + 1024 * gd->bg_inode_table);
+	printf("inodeTable information: \n");
+	printf("%d\n",inotable->file_type);
 
 	// TUT
-	struct ext2_super_block *sb = (struct ext2_super_block *) (disk + 1024);
 	printf("Inodes: %d\n", sb->s_inodes_count);
 	printf("Blocks: %d\n", sb->s_blocks_count);
 
-	struct ext2_group_desc *gd = (struct ext2_group_desc *) (disk + 2048);
 	printf("Block group: \n");
 	printf("     block bitmap: %d\n", gd->bg_block_bitmap);
 	printf("     inode bitmap: %d\n", gd->bg_inode_bitmap);
