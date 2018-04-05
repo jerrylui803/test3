@@ -49,27 +49,28 @@ int main(int argc, char *argv[]) {
 		p = strtok (NULL, "/");
 		dirArray[i] = p;
 		i++;
-
-
 	}
+
 	int numFiles = sizeof(dirArray)/sizeof(char *);
-	for (int j=0; j < numFiles; j++){
+	for (int j=0; j<numFiles; j++){
 		printf("%s \n", dirArray[j]);
 	}
 
+	// get root inode
 
-	//Compare inodes with each tokenarray name?
-	// root inode
-	int inodeNum = EXT2_ROOT_INO;
-	// run length(dirArray) times to get the coorspoin 
 	struct ext2_super_block *sb = (struct ext2_super_block *) (disk + 1024);
 	struct ext2_group_desc *gd = (struct ext2_group_desc *) (disk + 2048);
 
-	//get the inode table
-	struct ext2_dir_entry_2 *inotable = (struct ext2_dir_entry_2 *) (disk + 1024 * gd->bg_inode_table);
-	printf("inodeTable information: \n");
-	printf("%d\n",inotable->file_type);
+	// get the root inode
+	// root inode number 2 (at index 1)
+	struct ext2_inode *rootIno = (struct ext2_dir_entry_2 *) (disk + 1024 * gd->bg_inode_table + 128 * 1);
 
+	printf("root Inode information: \n");
+	printf("%d\n", rootIno->i_mode);
+	printf("%d\n", rootIno->i_blocks);
+
+
+	printf("---------Below is informaton--------\n");
 	// TUT
 	printf("Inodes: %d\n", sb->s_inodes_count);
 	printf("Blocks: %d\n", sb->s_blocks_count);
@@ -81,6 +82,7 @@ int main(int argc, char *argv[]) {
 	printf("     free blocks: %d\n", gd->bg_free_blocks_count);
 	printf("     free inodes: %d\n", gd->bg_free_inodes_count);
 	printf("     used_dirs: %d\n", gd->bg_used_dirs_count);
+	printf("     inode size: should be 128? %d\n", sb->s_inode_size);
 
 
 }
